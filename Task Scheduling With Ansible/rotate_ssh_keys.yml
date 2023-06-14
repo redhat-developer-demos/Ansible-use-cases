@@ -1,0 +1,39 @@
+---
+- name: Playbook to generate and a ssh key
+  hosts: localhost
+  tasks:
+    - name: Generate a SSH Keypair with default values
+      community.crypto.openssh_keypair:
+        path: "id_ssh_rsa_{{ item }}"
+        force: true
+      with_items:
+        - rhel8user1
+        - rhel8user2
+
+# Create a key in the user in machine, then send the key to nopc@xxx and then from machine transfer it to the different users.
+- name: Rotate the SSH keys
+  hosts: remote_machines
+  tasks:
+    - name: Copies the public key to remote machines
+      ansible.builtin.copy:
+        src: 'id_ssh_rsa_{{ item }}'
+        dest: "/home/{{ item }}/.ssh/id_ssh_rsa_{{ item }}"
+        mode: "0600"
+        owner: "{{ item }}"
+        force: true
+      with_items:
+        - rhel8user1
+        - rhel8user2
+
+# Create a key in the user in machine, then send the key to nopc@xxx and then from machine transfer it to the different users.
+- name: Rotate the SSH keys
+  hosts: destination_machine
+  tasks:
+    - name: Copy the public key to the destination vm
+      ansible.posix.authorized_key:
+        user: "{{ hostvars[inventory_hostname]['ansible_user'] }}"
+        state: present
+        key: "{{ lookup('file', 'id_ssh_rsa_' + item + '.pub') }}"
+      with_items:
+        - rhel8user1
+        - rhel8user2

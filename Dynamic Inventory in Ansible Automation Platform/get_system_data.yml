@@ -1,0 +1,33 @@
+---
+# Playbook to rotate the ansible keys for the  
+- name: Playbook to get the system usage for a particular instance.
+  hosts: aws_ec2
+  become: true
+  tasks:
+    - name: Download the sysstat package
+      ansible.builtin.apt:
+        name: sysstat
+        state: present
+
+    - name: Copy the file to the remote server
+      ansible.builtin.copy:
+        src: 'monitor.sh'
+        dest: 'monitor.sh'
+        mode: u+x
+
+    - name: Change the mode for a particular file
+      ansible.builtin.file:
+        path: 'monitor.sh'
+        mode: u+x
+
+    - name: Execute the Script 
+      ansible.builtin.shell: ./monitor.sh
+
+    - name: Read the file contents
+      ansible.builtin.shell: |
+        cat health.txt
+      register: file_contents
+
+    - name: Output the file 
+      ansible.builtin.debug:
+        msg: "{{ file_contents.stdout }}"  
