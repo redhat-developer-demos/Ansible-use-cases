@@ -1,0 +1,150 @@
+--- # Managing AWS Network Infrastructure
+- name: Managing AWS Network Infrastructure
+  hosts: localhost
+  vars:
+    region: ap-south-1
+    instance_type: t3.micro
+    ami: ami-0f9d9a251c1a44858
+    key_name: ansible-demo
+    vpc_name: ansible-vpc-test
+    cidr_block: "10.10.0.0/16"
+    cidr_public: "10.10.1.0/24"
+    cidr_public_2: "10.10.3.0/24"
+    cidr_private: "10.10.2.0/24"
+
+  tasks:
+    # Creata a VPC
+    - name: Create a new VPC
+      amazon.aws.ec2_vpc_net:
+        name: "Ansible-Test"
+        cidr_block: "{{ cidr_block }}"
+        region: "{{ region }}"
+      register: vpc
+
+    # Create a public subnet
+    - name: Create a new public Subnet
+      amazon.aws.ec2_vpc_subnet:
+        cidr: "{{ cidr_public }}"
+        region: "{{ region }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+        az: "ap-south-1b"
+      register: public_subnet
+
+    # Create another public subnet
+    - name: Create a new public Subnet
+      amazon.aws.ec2_vpc_subnet:
+        cidr: "{{ cidr_public_2 }}"
+        region: "ap-south-1"
+        vpc_id: "{{ vpc.vpc.id }}"
+        az: "ap-south-1a"
+      register: public_subnet_2
+
+    # Create a private subnet
+    - name: Create a new private Subnet
+      amazon.aws.ec2_vpc_subnet:
+        cidr: "{{ cidr_private }}"
+        region: "{{ region }}"
+        vpc_id: "{{ vpc.vpc.id }}"
+      register: private_subnet
+
+    # Create a internet_gateway
+    - name: Create Internet gateway
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+
+        region: "{{ region }}"
+        state: present
+      register: internet_gateway
+
+    # Link the Public Subnet to the Internet Gateway
+    - name: Link the Public Subnet to the Internet Gateway
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+
+        subnets:
+          - "{{ public_subnet.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ internet_gateway.gateway_id }}"
+          - dest: ::/0
+            gateway_id: "{{ internet_gateway.gateway_id }}"
+      register: public_route_table
+
+    # Link the Public Subnet 2 to the Internet Gateway
+    - name: Link the Public Subnet 2 to the Internet Gateway
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+
+        subnets:
+          - "{{ public_subnet_2.subnet.id }}"
+        routes:
+          - dest: 0.0.0.0/0
+            gateway_id: "{{ internet_gateway.gateway_id }}"
+          - dest: ::/0
+            gateway_id: "{{ internet_gateway.gateway_id }}"
+      register: public_route_table
+
+    # Link the private subnet to the NAT Gateway
+    - name: Link the private subnet to the NAT Gateway
+      amazon.aws.ec2_vpc_nat_gateway:
+        state: present
+
+        subnet_id: "{{ private_subnet.subnet.id }}"
+        wait: true
+        region: "{{ region }}"
+        if_exist_do_not_create: true
+      register: nat_gateway
+
+    # Create a security group
+    - name: Create a Security Group
+      amazon.aws.ec2_security_group:
+        name: "Ansible-Test-Security-Group"
+        description: "Ansible-Testing"
+
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            ports:
+              - 80
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "allow all on port 80"
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "allow all on port 22"
+      register: security_group
+
+    - name: Create LB Target Group
+      community.aws.elb_target_group:
+        state: present
+        name: "server-tg"
+        protocol: http
+        region: "{{ region }}"
+        port: "80"
+        vpc_id: "{{ vpc.vpc.id }}"
+
+      register: target_group
+
+    - name: Create Application Load Balancer
+      amazon.aws.elb_application_lb:
+        state: present
+        name: "server-lb"
+        region: "{{ region }}"
+
+        scheme: internet-facing
+        subnets:
+          - "{{ public_subnet.subnet.id }}"
+          - "{{ public_subnet_2.subnet.id }}"
+        security_groups:
+          - "Ansible-Test-Security-Group"
+        purge_listeners: yes
+        listeners:
+          - Protocol: "HTTP"
+            Port: "80"
+            DefaultActions:
+              - Type: forward
+                TargetGroupName: "{{ target_group.target_group_name }}"
