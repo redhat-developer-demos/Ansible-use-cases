@@ -1,0 +1,15 @@
+---
+- name: Cleanup Docker Resources
+  hosts: your_server_group
+  become: true
+
+  tasks:
+    - name: Delete Unused Docker Images
+      command: docker image prune -a -f
+
+    - name: Delete Docker Log Files
+      command: find /var/lib/docker/containers/ -type f -name "*.log" -delete
+
+    - name: Delete Stopped Docker Containers
+      command: docker container prune -f
+

@@ -20,6 +20,14 @@ services:
       - alertmanager-data:/data
     command: --config.file=/config/alertmanager.yml --log.level=debug
 
+  #event-driven:
+  # build: .
+  # ports:
+  #   - 5000:5000
+  # depends_on:
+  #   - prometheus
+  #   - alertmanager
+
 
 volumes:
   alertmanager-data:

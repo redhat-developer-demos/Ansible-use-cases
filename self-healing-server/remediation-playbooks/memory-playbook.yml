@@ -1,0 +1,29 @@
+---
+- name: Clear cache and enable swap
+  hosts: your_server_group
+  become: true
+
+  tasks:
+    - name: Clear Page Cache
+      command: sync && echo 1 > /proc/sys/vm/drop_caches
+
+    - name: Create Swap File
+      command: fallocate -l 1G /swapfile
+      args:
+        creates: /swapfile
+
+    - name: Set Permissions for Swap File
+      command: chmod 600 /swapfile
+
+    - name: Format Swap File
+      command: mkswap /swapfile
+
+    - name: Enable Swap File
+      command: swapon /swapfile
+
+    - name: Update fstab for Swap File Persistence
+      lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
+
