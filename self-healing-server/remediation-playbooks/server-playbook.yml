@@ -1,8 +1,0 @@
----
-- name: Restart Linux Server
-  hosts: your_server_group
-  become: true
-
-  tasks:
-    - name: Restart Server
-      command: reboot
