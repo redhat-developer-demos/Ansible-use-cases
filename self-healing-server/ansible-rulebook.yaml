@@ -1,0 +1,39 @@
+---
+- name: Automatic Remediation of a webserver
+  hosts: localhost
+  sources:
+    - name: listen for alerts
+      ansible.eda.alertmanager:
+        host: 0.0.0.0
+        port: 5000
+  rules:
+    - name: server down
+      condition: event.alert.labels.job == "server" and event.alert.status == "firing"
+      action:
+        run_playbook:
+          name: say-what.yml
+
+    - name: Storage full on server
+      condition: event.alert.labels.job == "storage" and event.alert.status == "firing"
+      action:
+        run_playbook:
+          name: say-what.yml
+
+    - name: memory full on server
+      condition: event.alert.labels.job == "memory" and event.alert.status == "firing"
+      action:
+        run_playbook:
+          name: say-what.yml
+
+    - name: ssh server down
+      condition: event.alert.labels.job == "ssh" and event.alert.status == "firing"
+      action:
+        run_playbook:
+          name: say-what.yml
+
+    - name: CPU full on server
+      condition: event.alert.labels.job == "cpu" and event.alert.status == "firing"
+      action:
+        run_playbook:
+          name: say-what.yml
+
