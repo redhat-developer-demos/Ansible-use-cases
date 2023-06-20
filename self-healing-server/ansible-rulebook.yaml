@@ -11,29 +11,29 @@
       condition: event.alert.labels.job == "server" and event.alert.status == "firing"
       action:
         run_playbook:
-          name: say-what.yml
+          name: remediation-playbooks/server-playbook.yml
 
     - name: Storage full on server
       condition: event.alert.labels.job == "storage" and event.alert.status == "firing"
       action:
         run_playbook:
-          name: say-what.yml
+          name: remediation-playbooks/storage-playbook.yml
 
     - name: memory full on server
       condition: event.alert.labels.job == "memory" and event.alert.status == "firing"
       action:
         run_playbook:
-          name: say-what.yml
+          name: remediation-playbooks/memory-playbook.yml
 
     - name: ssh server down
       condition: event.alert.labels.job == "ssh" and event.alert.status == "firing"
       action:
         run_playbook:
-          name: say-what.yml
+          name: remediation-playbooks/ssh-playbook.yml
 
     - name: CPU full on server
       condition: event.alert.labels.job == "cpu" and event.alert.status == "firing"
       action:
         run_playbook:
-          name: say-what.yml
+          name: remediation-playbooks/cpu-playbook.yml
 
