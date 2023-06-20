@@ -1,0 +1,60 @@
+groups:
+  - name: DemoAlerts
+    rules:
+      - alert: InstanceDown 
+        expr: up{job="services"} < 1 
+        for: 1m
+        labels:
+          severity: low
+          job: "server"
+        annotations:
+          summary: 'Alert with low severity.'
+
+      - alert: InstanceDownCritical
+        expr: up{job="services"} < 1 
+        for: 1m 
+        labels:
+          job: "fastapi"
+          severity: high
+        annotations:
+          summary: 'Alert with high severity.'
+
+      - alert: StorageFullAlert
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          job: "storage"
+          severity: critical
+        annotations:
+          summary: "Storage full on instance {{ $labels.instance }}"
+          description: "The storage on instance {{ $labels.instance }} is almost full. Please investigate and take necessary actions." 
+
+      - alert: RAMFullAlert
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 10
+        for: 5m
+        labels:
+          job: "memory"
+          severity: critical
+        annotations:
+          summary: "RAM full on instance {{ $labels.instance }}"
+          description: "The RAM on instance {{ $labels.instance }} is almost full. Please investigate and take necessary actions."
+
+      - alert: SSHServerDownAlert
+        expr: probe_ssh_connectivity_up == 0
+        for: 1m
+        labels:
+          job: "ssh"
+          severity: critical
+        annotations:
+          summary: "SSH server down on instance {{ $labels.instance }}"
+          description: "The SSH server on instance {{ $labels.instance }} is not responding. Please investigate and take necessary actions."
+
+      - alert: CPUFullAlert
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          job: "cpu"
+          severity: warning
+        annotations:
+          summary: "CPU full on instance {{ $labels.instance }}"
+          description: "The CPU on instance {{ $labels.instance }} is almost fully utilized. Please investigate and take necessary actions."
