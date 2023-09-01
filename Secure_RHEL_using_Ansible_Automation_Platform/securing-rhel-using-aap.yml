@@ -1,6 +1,6 @@
 ---
 - name: Deploy SELinux Policies
-  hosts: rhel_server
+  hosts: 74.235.186.212
   become: yes
   tasks:
     - name: Install SELinux policy package
