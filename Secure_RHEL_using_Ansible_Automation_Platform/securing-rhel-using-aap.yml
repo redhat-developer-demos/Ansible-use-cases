@@ -13,15 +13,15 @@
         policy: targeted
         state: enforcing
 
-    - name: Reboot server to apply SELinux changes
-      reboot:
-        reboot_timeout: 300
-      when: ansible_selinux.state != 'enforcing'
+  #   - name: Reboot server to apply SELinux changes
+  #     reboot:
+  #       reboot_timeout: 300
+  #     when: ansible_selinux.state != 'enforcing'
 
-  handlers:
-    - name: wait for server to come back online
-      wait_for_connection:
-        timeout: 300
+  # handlers:
+  #   - name: wait for server to come back online
+  #     wait_for_connection:
+  #       timeout: 300
 
   #   - include_role:
   #       name: acl_manager
