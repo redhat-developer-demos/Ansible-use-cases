@@ -40,14 +40,14 @@
     #     key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
     #     state: present
 
-    - name: Add sudoer rule for local user
-      copy:
-        dest: /etc/sudoers.d/admin
-        src: etc/sudoers.d/admin
-        owner: root
-        group: root
-        mode: 0440
-        validate: /usr/sbin/visudo -csf %s
+    # - name: Add sudoer rule for local user
+    #   copy:
+    #     dest: /etc/sudoers.d/admin
+    #     src: etc/sudoers.d/admin
+    #     owner: root
+    #     group: root
+    #     mode: 0440
+    #     validate: /usr/sbin/visudo -csf %s
 
     - name: Add hardened SSH config
       copy:
