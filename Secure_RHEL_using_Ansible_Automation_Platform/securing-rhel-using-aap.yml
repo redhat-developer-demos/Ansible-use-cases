@@ -96,26 +96,6 @@
       with_items: "{{ unnecessary_services }}"
       ignore_errors: yes
 
-    - name: Set a message of the day
-      copy:
-        dest: /etc/motd
-        src: etc/motd
-        owner: root
-        group: root
-        mode: 0644
-
-    - name: Set a login banner
-      copy:
-        dest: "{{ item }}"
-        src: etc/issue
-        owner: root
-        group: root
-        mode: 0644
-      with_items:
-        - /etc/issue
-        - /etc/issue.net
-
-
     - name: Ensure firewall package is installed
       ansible.builtin.dnf:
         name: firewalld
