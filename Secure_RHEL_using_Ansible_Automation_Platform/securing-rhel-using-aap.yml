@@ -49,14 +49,14 @@
     #     mode: 0440
     #     validate: /usr/sbin/visudo -csf %s
 
-    - name: Add hardened SSH config
-      copy:
-        dest: /etc/ssh/sshd_config
-        src: etc/ssh/sshd_config
-        owner: root
-        group: root
-        mode: 0600
-      notify: Reload SSH
+    # - name: Add hardened SSH config
+    #   copy:
+    #     dest: /etc/ssh/sshd_config
+    #     src: etc/ssh/sshd_config
+    #     owner: root
+    #     group: root
+    #     mode: 0600
+    #   notify: Reload SSH
 
     - name: Add SSH port to internal zone
       firewalld:
