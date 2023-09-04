@@ -1,6 +1,6 @@
 ---
 - name: Linux hardening
-  hosts: 74.235.186.212
+  hosts: 172.174.253.196
   gather_facts: yes
 
   vars:
