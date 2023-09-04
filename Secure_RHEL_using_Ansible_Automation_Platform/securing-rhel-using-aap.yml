@@ -1,49 +1,268 @@
 ---
-- name: Deploy SELinux Policies
+- name: Linux hardening
   hosts: 74.235.186.212
-  become: yes
+  gather_facts: yes
+
+  vars:
+    allowed_ssh_networks:
+      - 192.168.122.0/24
+      - 10.10.10.0/24
+    unnecessary_services:
+      - postfix
+      - telnet
+    unnecessary_software:
+      - tcpdump
+      - nmap-ncat
+      - wpa_supplicant
   tasks:
-    - name: Install SELinux policy package
-      yum:
-        name: selinux-policy-targeted
+    - name: Perform full patching
+      package:
+        name: '*'
         state: latest
 
-    - name: Set SELinux to enforcing mode
-      selinux:
+    - name: Add admin group
+      group:
+        name: admin
+        state: present
+
+    - name: Add local user
+      user:
+        name: admin
+        group: admin
+        shell: /bin/bash
+        home: /home/admin
+        create_home: yes
+        state: present
+
+    # - name: Add SSH public key for user
+    #   authorized_key:
+    #     user: admin
+    #     key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    #     state: present
+
+    - name: Add sudoer rule for local user
+      copy:
+        dest: /etc/sudoers.d/admin
+        src: etc/sudoers.d/admin
+        owner: root
+        group: root
+        mode: 0440
+        validate: /usr/sbin/visudo -csf %s
+
+    - name: Add hardened SSH config
+      copy:
+        dest: /etc/ssh/sshd_config
+        src: etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: 0600
+      notify: Reload SSH
+
+    - name: Add SSH port to internal zone
+      firewalld:
+        zone: internal
+        service: ssh
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: Add permitted networks to internal zone
+      firewalld:
+        zone: internal
+        source: "{{ item }}"
+        state: enabled
+        immediate: yes
+        permanent: yes
+      with_items: "{{ allowed_ssh_networks }}"
+
+    - name: Drop ssh from the public zone
+      firewalld:
+        zone: public
+        service: ssh
+        state: disabled
+        immediate: yes
+        permanent: yes
+
+    - name: Remove undesirable packages
+      package:
+        name: "{{ unnecessary_software }}"
+        state: absent
+
+    - name: Stop and disable unnecessary services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      with_items: "{{ unnecessary_services }}"
+      ignore_errors: yes
+
+    - name: Set a message of the day
+      copy:
+        dest: /etc/motd
+        src: etc/motd
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Set a login banner
+      copy:
+        dest: "{{ item }}"
+        src: etc/issue
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - /etc/issue
+        - /etc/issue.net
+
+
+    - name: Ensure firewall package is installed
+      ansible.builtin.dnf:
+        name: firewalld
+        state: present
+
+    - name: Ensure firewall service is up and running
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Block non-required services
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        state: disabled
+        permanent: yes
+        immediate: yes
+      loop:
+        - cockpit
+        - dhcpv6-client
+
+    - name: Enable required services
+      ansible.posix.firewalld:
+        service: "ssh"
+        state: enabled
+        permanent: yes
+        immediate: yes
+
+    - name: Ensure SELinux is enabled and enforcing
+      ansible.posix.selinux:
         policy: targeted
         state: enforcing
+      register: selinux_status
 
-  #   - name: Reboot server to apply SELinux changes
-  #     reboot:
-  #       reboot_timeout: 300
-  #     when: ansible_selinux.state != 'enforcing'
+    - name: Verify if reboot needed
+      ansible.builtin.debug:
+        msg: "Reboot needed: {{ selinux_status.reboot_required }}"
+      changed_when: "{{ selinux_status.reboot_required | bool }}"
+      notify: reboot_host
 
-  # handlers:
-  #   - name: wait for server to come back online
-  #     wait_for_connection:
-  #       timeout: 300
+    - name: Harden kernel parameters
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/90-kernel.conf
+      loop:
+      - name: kernel.randomize_va_space
+        value: 2
+      - name: kernel.dmesg_restrict
+        value: 1
+      - name: kernel.perf_event_paranoid
+        value: 2
 
-  #   - include_role:
-  #       name: acl_manager
-  #       tasks_from: block_ip
-  #     vars:
-  #       source_ip: 172.17.13.98
-  #       destination_ip: 192.168.0.10
-  #       ansible_network_os: checkpoint
+    - name: Harden network parameters
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/90-net.conf
+      loop:
+       - name: net.ipv4.tcp_syncookies
+         value: 1
+       - name: net.ipv4.conf.default.log_martians
+         value: 1
+       - name: net.ipv4.conf.all.log_martians
+         value: 1
+       - name: net.ipv4.conf.all.accept_source_route
+         value: 0
+       - name: net.ipv4.conf.default.accept_source_route
+         value: 0
+       - name: net.ipv6.conf.all.accept_source_route
+         value: 0
+       - name: net.ipv6.conf.default.accept_source_route
+         value: 0
 
+    - name: Disable ip forwarding
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/90-ip.conf
+      loop:
+      - name: net.ipv4.ip_forward
+        value: 0
+      - name: net.ipv6.conf.all.forwarding
+        value: 0
 
+    - name: Disable ICMP echo and redirects
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/90-icmp.conf
+      loop:
+      - name: net.ipv4.icmp_echo_ignore_broadcasts
+        value: 1
+      - name: net.ipv4.icmp_echo_ignore_all
+        value: 1
+      - name: net.ipv4.conf.default.accept_redirects
+        value: 0
+      - name: net.ipv4.conf.all.accept_redirects
+        value: 0
+      - name: net.ipv6.conf.all.accept_redirects
+        value: 0
+      - name: net.ipv6.conf.default.accept_redirects
+        value: 0
+      - name: net.ipv4.conf.default.send_redirects
+        value: 0
+      - name: net.ipv4.conf.all.send_redirects
+        value: 0
 
-  # vars:
-  #   ids_provider: snort
+    - name: Ensure audit package is installed
+      ansible.builtin.dnf:
+        name: audit
+        state: present
 
-  # tasks:
-  #   -  name: Add snort password attack rule
-  #      include_role:
-  #        name: "ansible_security.ids_rule"
-  #      vars:
-  #        ids_rule: 'alert tcp any any -> any any (msg:"Attempted /etc/passwd Attack"; uricontent:"/etc/passwd"; classtype:attempted-user; sid:99000004; priority:1; rev:1;)'
-  #        ids_rules_file: '/etc/snort/rules/local.rules'
-  #        ids_rule_state: present
+    - name: Ensure auditd service is up and running
+      ansible.builtin.service:
+        name: auditd
+        state: started
+        enabled: yes
 
+    - name: Add a basic audit config
+      ansible.builtin.copy:
+        src: audit.rules
+        dest: /etc/audit/rules.d/audit.rules
+        owner: root
+        group: root
+        mode: 0600
+      notify: reboot_host
 
+  handlers:
 
+    - name: Reload SSH
+      service:
+        name: sshd
+        state: reloaded
+
+    - name: reboot_host
+      ansible.builtin.reboot:
+        reboot_timeout: 360
