@@ -227,14 +227,14 @@
         state: started
         enabled: yes
 
-    - name: Add a basic audit config
-      ansible.builtin.copy:
-        src: audit.rules
-        dest: /etc/audit/rules.d/audit.rules
-        owner: root
-        group: root
-        mode: 0600
-      notify: reboot_host
+    # - name: Add a basic audit config
+    #   ansible.builtin.copy:
+    #     src: audit.rules
+    #     dest: /etc/audit/rules.d/audit.rules
+    #     owner: root
+    #     group: root
+    #     mode: 0600
+    #   notify: reboot_host
 
   handlers:
 
