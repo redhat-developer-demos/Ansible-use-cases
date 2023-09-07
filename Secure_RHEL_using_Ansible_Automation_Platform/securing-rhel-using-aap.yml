@@ -2,37 +2,113 @@
 - name: Linux hardening
   hosts: 172.174.253.196
   gather_facts: yes
-
-  vars:
-    allowed_ssh_networks:
-      - 192.168.122.0/24
-      - 10.10.10.0/24
-    unnecessary_services:
-      - postfix
-      - telnet
-    unnecessary_software:
-      - tcpdump
-      - nmap-ncat
-      - wpa_supplicant
+  
   tasks:
-    - name: Perform full patching
-      package:
-        name: '*'
-        state: latest
+    - name: Set SELinux mode to targeted
+      selinux:
+        policy: targeted
+        state: enforcing
 
-    - name: Add admin group
-      group:
-        name: admin
-        state: present
+    - name: Allow Ansible to run scripts
+      seboolean:
+        name: ansible_run_unconfined
+        state: yes
 
-    - name: Add local user
-      user:
-        name: admin
-        group: admin
-        shell: /bin/bash
-        home: /home/admin
-        create_home: yes
-        state: present
+    - name: Allow Apache to connect to the network
+      seboolean:
+        name: httpd_can_network_connect
+        state: yes
+
+    - name: Allow Samba to read user home directories
+      seboolean:
+        name: samba_enable_home_dirs
+        state: yes
+
+    - name: Allow FTP to write files to home directories
+      seboolean:
+        name: ftpd_full_access
+        state: yes
+
+    # - name: Copy custom policy module to the server
+    #   copy:
+    #     src: /path/to/custom_policy.pp
+    #     dest: /etc/selinux/targeted/modules/active/modules/custom_policy.pp
+    #     c
+    # - name: Load the custom policy module
+    #   shell: semodule -i /etc/selinux/targeted/modules/active/modules/custom_policy.pp
+
+    - name: Allow cron jobs to change user content
+      seboolean:
+        name: cron_can_relabel
+        state: yes
+
+    - name: Allow MySQL to connect to the network
+      seboolean:
+        name: mysql_connect_any
+        state: yes
+
+    - name: Allow Nginx to make network connections
+      seboolean:
+        name: httpd_can_network_connect
+        state: yes
+
+    - name: Allow PostgreSQL to connect to the network
+      seboolean:
+        name: postgresql_can_network_connect
+        state: yes
+
+    - name: Allow Ansible to access SSH keys
+      seboolean:
+        name: ansible_use_ssh_keys
+        state: yes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  # vars:
+  #   allowed_ssh_networks:
+  #     - 192.168.122.0/24
+  #     - 10.10.10.0/24
+  #   unnecessary_services:
+  #     - postfix
+  #     - telnet
+  #   unnecessary_software:
+  #     - tcpdump
+  #     - nmap-ncat
+  #     - wpa_supplicant
+  # tasks:
+  #   - name: Perform full patching
+  #     package:
+  #       name: '*'
+  #       state: latest
+
+  #   - name: Add admin group
+  #     group:
+  #       name: admin
+  #       state: present
+
+  #   - name: Add local user
+  #     user:
+  #       name: admin
+  #       group: admin
+  #       shell: /bin/bash
+  #       home: /home/admin
+  #       create_home: yes
+  #       state: present
+        #===============================================================
 
     # - name: Add SSH public key for user
     #   authorized_key:
@@ -82,167 +158,167 @@
     #     state: disabled
     #     immediate: yes
     #     permanent: yes
+    #======================================================
+  #   - name: Remove undesirable packages
+  #     package:
+  #       name: "{{ unnecessary_software }}"
+  #       state: absent
 
-    - name: Remove undesirable packages
-      package:
-        name: "{{ unnecessary_software }}"
-        state: absent
+  #   - name: Stop and disable unnecessary services
+  #     service:
+  #       name: "{{ item }}"
+  #       state: stopped
+  #       enabled: no
+  #     with_items: "{{ unnecessary_services }}"
+  #     ignore_errors: yes
 
-    - name: Stop and disable unnecessary services
-      service:
-        name: "{{ item }}"
-        state: stopped
-        enabled: no
-      with_items: "{{ unnecessary_services }}"
-      ignore_errors: yes
+  #   - name: Ensure firewall package is installed
+  #     ansible.builtin.dnf:
+  #       name: firewalld
+  #       state: present
 
-    - name: Ensure firewall package is installed
-      ansible.builtin.dnf:
-        name: firewalld
-        state: present
+  #   - name: Ensure firewall service is up and running
+  #     ansible.builtin.service:
+  #       name: firewalld
+  #       state: started
+  #       enabled: yes
 
-    - name: Ensure firewall service is up and running
-      ansible.builtin.service:
-        name: firewalld
-        state: started
-        enabled: yes
+  #   - name: Block non-required services
+  #     ansible.posix.firewalld:
+  #       service: "{{ item }}"
+  #       state: disabled
+  #       permanent: yes
+  #       immediate: yes
+  #     loop:
+  #       - cockpit
+  #       - dhcpv6-client
 
-    - name: Block non-required services
-      ansible.posix.firewalld:
-        service: "{{ item }}"
-        state: disabled
-        permanent: yes
-        immediate: yes
-      loop:
-        - cockpit
-        - dhcpv6-client
+  #   - name: Enable required services
+  #     ansible.posix.firewalld:
+  #       service: "ssh"
+  #       state: enabled
+  #       permanent: yes
+  #       immediate: yes
 
-    - name: Enable required services
-      ansible.posix.firewalld:
-        service: "ssh"
-        state: enabled
-        permanent: yes
-        immediate: yes
+  #   - name: Ensure SELinux is enabled and enforcing
+  #     ansible.posix.selinux:
+  #       policy: targeted
+  #       state: enforcing
+  #     register: selinux_status
 
-    - name: Ensure SELinux is enabled and enforcing
-      ansible.posix.selinux:
-        policy: targeted
-        state: enforcing
-      register: selinux_status
+  #   - name: Verify if reboot needed
+  #     ansible.builtin.debug:
+  #       msg: "Reboot needed: {{ selinux_status.reboot_required }}"
+  #     changed_when: "{{ selinux_status.reboot_required | bool }}"
+  #     notify: reboot_host
 
-    - name: Verify if reboot needed
-      ansible.builtin.debug:
-        msg: "Reboot needed: {{ selinux_status.reboot_required }}"
-      changed_when: "{{ selinux_status.reboot_required | bool }}"
-      notify: reboot_host
+  #   - name: Harden kernel parameters
+  #     ansible.posix.sysctl:
+  #       name: "{{ item.name }}"
+  #       value: '{{ item.value }}'
+  #       sysctl_set: yes
+  #       state: present
+  #       reload: yes
+  #       sysctl_file: /etc/sysctl.d/90-kernel.conf
+  #     loop:
+  #     - name: kernel.randomize_va_space
+  #       value: 2
+  #     - name: kernel.dmesg_restrict
+  #       value: 1
+  #     - name: kernel.perf_event_paranoid
+  #       value: 2
 
-    - name: Harden kernel parameters
-      ansible.posix.sysctl:
-        name: "{{ item.name }}"
-        value: '{{ item.value }}'
-        sysctl_set: yes
-        state: present
-        reload: yes
-        sysctl_file: /etc/sysctl.d/90-kernel.conf
-      loop:
-      - name: kernel.randomize_va_space
-        value: 2
-      - name: kernel.dmesg_restrict
-        value: 1
-      - name: kernel.perf_event_paranoid
-        value: 2
+  #   - name: Harden network parameters
+  #     ansible.posix.sysctl:
+  #       name: "{{ item.name }}"
+  #       value: '{{ item.value }}'
+  #       sysctl_set: yes
+  #       state: present
+  #       reload: yes
+  #       sysctl_file: /etc/sysctl.d/90-net.conf
+  #     loop:
+  #      - name: net.ipv4.tcp_syncookies
+  #        value: 1
+  #      - name: net.ipv4.conf.default.log_martians
+  #        value: 1
+  #      - name: net.ipv4.conf.all.log_martians
+  #        value: 1
+  #      - name: net.ipv4.conf.all.accept_source_route
+  #        value: 0
+  #      - name: net.ipv4.conf.default.accept_source_route
+  #        value: 0
+  #      - name: net.ipv6.conf.all.accept_source_route
+  #        value: 0
+  #      - name: net.ipv6.conf.default.accept_source_route
+  #        value: 0
 
-    - name: Harden network parameters
-      ansible.posix.sysctl:
-        name: "{{ item.name }}"
-        value: '{{ item.value }}'
-        sysctl_set: yes
-        state: present
-        reload: yes
-        sysctl_file: /etc/sysctl.d/90-net.conf
-      loop:
-       - name: net.ipv4.tcp_syncookies
-         value: 1
-       - name: net.ipv4.conf.default.log_martians
-         value: 1
-       - name: net.ipv4.conf.all.log_martians
-         value: 1
-       - name: net.ipv4.conf.all.accept_source_route
-         value: 0
-       - name: net.ipv4.conf.default.accept_source_route
-         value: 0
-       - name: net.ipv6.conf.all.accept_source_route
-         value: 0
-       - name: net.ipv6.conf.default.accept_source_route
-         value: 0
+  #   - name: Disable ip forwarding
+  #     ansible.posix.sysctl:
+  #       name: "{{ item.name }}"
+  #       value: '{{ item.value }}'
+  #       sysctl_set: yes
+  #       state: present
+  #       reload: yes
+  #       sysctl_file: /etc/sysctl.d/90-ip.conf
+  #     loop:
+  #     - name: net.ipv4.ip_forward
+  #       value: 0
+  #     - name: net.ipv6.conf.all.forwarding
+  #       value: 0
 
-    - name: Disable ip forwarding
-      ansible.posix.sysctl:
-        name: "{{ item.name }}"
-        value: '{{ item.value }}'
-        sysctl_set: yes
-        state: present
-        reload: yes
-        sysctl_file: /etc/sysctl.d/90-ip.conf
-      loop:
-      - name: net.ipv4.ip_forward
-        value: 0
-      - name: net.ipv6.conf.all.forwarding
-        value: 0
+  #   - name: Disable ICMP echo and redirects
+  #     ansible.posix.sysctl:
+  #       name: "{{ item.name }}"
+  #       value: '{{ item.value }}'
+  #       sysctl_set: yes
+  #       state: present
+  #       reload: yes
+  #       sysctl_file: /etc/sysctl.d/90-icmp.conf
+  #     loop:
+  #     - name: net.ipv4.icmp_echo_ignore_broadcasts
+  #       value: 1
+  #     - name: net.ipv4.icmp_echo_ignore_all
+  #       value: 1
+  #     - name: net.ipv4.conf.default.accept_redirects
+  #       value: 0
+  #     - name: net.ipv4.conf.all.accept_redirects
+  #       value: 0
+  #     - name: net.ipv6.conf.all.accept_redirects
+  #       value: 0
+  #     - name: net.ipv6.conf.default.accept_redirects
+  #       value: 0
+  #     - name: net.ipv4.conf.default.send_redirects
+  #       value: 0
+  #     - name: net.ipv4.conf.all.send_redirects
+  #       value: 0
 
-    - name: Disable ICMP echo and redirects
-      ansible.posix.sysctl:
-        name: "{{ item.name }}"
-        value: '{{ item.value }}'
-        sysctl_set: yes
-        state: present
-        reload: yes
-        sysctl_file: /etc/sysctl.d/90-icmp.conf
-      loop:
-      - name: net.ipv4.icmp_echo_ignore_broadcasts
-        value: 1
-      - name: net.ipv4.icmp_echo_ignore_all
-        value: 1
-      - name: net.ipv4.conf.default.accept_redirects
-        value: 0
-      - name: net.ipv4.conf.all.accept_redirects
-        value: 0
-      - name: net.ipv6.conf.all.accept_redirects
-        value: 0
-      - name: net.ipv6.conf.default.accept_redirects
-        value: 0
-      - name: net.ipv4.conf.default.send_redirects
-        value: 0
-      - name: net.ipv4.conf.all.send_redirects
-        value: 0
+  #   - name: Ensure audit package is installed
+  #     ansible.builtin.dnf:
+  #       name: audit
+  #       state: present
 
-    - name: Ensure audit package is installed
-      ansible.builtin.dnf:
-        name: audit
-        state: present
+  #   - name: Ensure auditd service is up and running
+  #     ansible.builtin.service:
+  #       name: auditd
+  #       state: started
+  #       enabled: yes
 
-    - name: Ensure auditd service is up and running
-      ansible.builtin.service:
-        name: auditd
-        state: started
-        enabled: yes
+  #   # - name: Add a basic audit config
+  #   #   ansible.builtin.copy:
+  #   #     src: audit.rules
+  #   #     dest: /etc/audit/rules.d/audit.rules
+  #   #     owner: root
+  #   #     group: root
+  #   #     mode: 0600
+  #   #   notify: reboot_host
 
-    # - name: Add a basic audit config
-    #   ansible.builtin.copy:
-    #     src: audit.rules
-    #     dest: /etc/audit/rules.d/audit.rules
-    #     owner: root
-    #     group: root
-    #     mode: 0600
-    #   notify: reboot_host
+  # handlers:
 
-  handlers:
+  #   - name: Reload SSH
+  #     service:
+  #       name: sshd
+  #       state: reloaded
 
-    - name: Reload SSH
-      service:
-        name: sshd
-        state: reloaded
-
-    - name: reboot_host
-      ansible.builtin.reboot:
-        reboot_timeout: 360
+  #   - name: reboot_host
+  #     ansible.builtin.reboot:
+  #       reboot_timeout: 360
