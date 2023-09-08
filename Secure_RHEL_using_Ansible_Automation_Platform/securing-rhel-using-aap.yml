@@ -1,6 +1,6 @@
 ---
 - name: Linux hardening
-  hosts: 172.174.253.196
+  hosts: rhel_servers
   gather_facts: yes
   
   tasks:
@@ -8,7 +8,6 @@
       selinux:
         policy: targeted
         state: enforcing
-
 
     - name: Allow Apache to connect to the network
       seboolean:
@@ -25,13 +24,13 @@
         name: ftpd_full_access
         state: yes
 
-    # - name: Copy custom policy module to the server
-    #   copy:
-    #     src: /path/to/custom_policy.pp
-    #     dest: /etc/selinux/targeted/modules/active/modules/custom_policy.pp
+    - name: Copy custom policy module to the server
+      copy:
+        src: /path/to/custom_policy.pp
+        dest: /etc/selinux/targeted/modules/active/modules/custom_policy.pp
         
-    # - name: Load the custom policy module
-    #   shell: semodule -i /etc/selinux/targeted/modules/active/modules/custom_policy.pp
+    - name: Load the custom policy module
+      shell: semodule -i /etc/selinux/targeted/modules/active/modules/custom_policy.pp
 
     - name: Allow cron jobs to change user content
       seboolean:
