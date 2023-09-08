@@ -9,10 +9,6 @@
         policy: targeted
         state: enforcing
 
-    - name: Allow Ansible to run scripts
-      seboolean:
-        name: ansible_run_unconfined
-        state: yes
 
     - name: Allow Apache to connect to the network
       seboolean:
@@ -47,21 +43,10 @@
         name: mysql_connect_any
         state: yes
 
-    - name: Allow Nginx to make network connections
-      seboolean:
-        name: httpd_can_network_connect
-        state: yes
-
     - name: Allow PostgreSQL to connect to the network
       seboolean:
-        name: postgresql_can_network_connect
+        name: selinuxuser_postgresql_connect_enabled 
         state: yes
-
-    - name: Allow Ansible to access SSH keys
-      seboolean:
-        name: ansible_use_ssh_keys
-        state: yes
-
 
 
 
