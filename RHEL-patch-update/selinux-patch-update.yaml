@@ -1,26 +1,12 @@
-# ---
-# - name: Red Hat Enterprice linux patch update
-#   hosts: 	20.121.64.250
-#   tasks:
-#     - name: selinux patch update
-#       ansible.builtin.dnf:
-#         - name: https://access.cdn.redhat.com/content/origin/rpms/selinux-policy/38.1.23/1.el9_3.2/fd431d51/selinux-policy-38.1.23-1.el9_3.2.noarch.rpm?user=36ff4a99652c120ce4a185a93d0da9a1&_auth_=1708174366_d8718bf30d2ccf0a8ee41491d2bf3baa
-#           state: present
-
-#     - name: Upgrade all packages
-#       ansible.builtin.dnf:
-#         - name: "*"
-#           state: latest
-
 ---
 - name: Red Hat Enterprice linux patch update
-  hosts: 20.121.64.250
+  hosts: rhel-server
   gather_facts: yes
   
   tasks:
     - name: selinux patch update
       dnf:
-        name:  https://access.cdn.redhat.com/content/origin/rpms/selinux-policy/38.1.23/1.el9_3.2/fd431d51/selinux-policy-38.1.23-1.el9_3.2.noarch.rpm?user=36ff4a99652c120ce4a185a93d0da9a1&_auth_=1708327768_65a6aab5b9beeaaed793e9eb5a0b2a7b
+        name:  https://access.cdn.redhat.com/content/origin/rpms/selinux-policy/38.1.23/1.el9_3.2/fd431d51/selinux-policy-38.1.23-1.el9_3.2.noarch.rpm
         state: present
 
     - name:  Update all packages
