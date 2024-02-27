@@ -1,0 +1,8 @@
+plugin: redhat.satellite.foreman
+url: http://localhost:3000/
+user: admin
+password: changeme
+validate_certs: false
+want_params: true
+want_facts: true
+use_reports_api: false

@@ -1,0 +1,68 @@
+---
+- hosts: localhost
+  collections:
+    - redhat.satellite
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+  tasks:
+    - include_tasks: tasks/setting.yml
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: excluded_facts
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: token_duration
+
+- hosts: tests
+  collections:
+    - redhat.satellite
+  gather_facts: false
+  vars_files:
+    - vars/server.yml
+  tasks:
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_value: 'Welcome!'
+        expected_change: true
+    - include_tasks: tasks/setting_fact.yml
+      vars:
+        setting_name: login_text
+        setting_value: 'Welcome!'
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_value: 'Welcome!'
+        expected_change: false
+    - include_tasks: tasks/setting.yml
+      vars:
+        expected_change: true
+    - include_tasks: tasks/setting.yml
+      vars:
+        expected_change: false
+
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: excluded_facts
+        setting_value: ['foo', 'bar']
+        expected_change: true
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: excluded_facts
+        setting_value: ['foo', 'bar']
+        expected_change: false
+
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: token_duration
+        setting_value: 99
+        expected_change: true
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: token_duration
+        setting_value: 99
+        expected_change: false
+    - include_tasks: tasks/setting.yml
+      vars:
+        setting_name: token_duration
+        expected_change: true
+...
