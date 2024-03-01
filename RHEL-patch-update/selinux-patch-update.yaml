@@ -6,7 +6,7 @@
   tasks:
     - name: selinux patch update
       dnf:
-        name:  https://access.cdn.redhat.com/content/origin/rpms/selinux-policy/38.1.23/1.el9_3.2/fd431d51/selinux-policy-38.1.23-1.el9_3.2.noarch.rpm?user=398fb2ae0d6f11dd941c8f830a261002&_auth_=1709211245_b4eead39fd026876a36fac15c297c968
+        name:  https://access.cdn.redhat.com/content/origin/rpms/selinux-policy/38.1.23/1.el9_3.2/fd431d51/selinux-policy-38.1.23-1.el9_3.2.noarch.rpm
         state: present
 
     - name:  Update all packages
