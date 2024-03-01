@@ -1,6 +1,6 @@
 ---
 - name: Red Hat Enterprice linux patch update
-  hosts: 172.210.75.179
+  hosts: rhel
   gather_facts: yes
   
   tasks:
