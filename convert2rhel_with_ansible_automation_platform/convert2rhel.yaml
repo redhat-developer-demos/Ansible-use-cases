@@ -6,7 +6,7 @@
         satellite_username: "{{ username }}"
         satellite_password: "{{ password }}"
         satellite_organization: "Default Organization"
-        satellite_manifest_path: "./convert2rhel.zip"
+        # satellite_manifest_path: "./convert2rhel.zip"
         # satellite_content_rhel_enable_rhel7: true
         satellite_content_rhel_enable_rhel8: true
         satellite_content_rhel_rhel8_releasever: 8.7
