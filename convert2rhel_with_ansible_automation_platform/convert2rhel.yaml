@@ -1,4 +1,4 @@
-- hosts: localhost
+- hosts: 172.210.59.66
   roles:
     - role: redhat.satellite.convert2rhel
       vars:
