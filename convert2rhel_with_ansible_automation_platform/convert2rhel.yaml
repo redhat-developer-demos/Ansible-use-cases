@@ -2,7 +2,7 @@
   roles:
     - role: redhat.satellite.convert2rhel
       vars:
-        satellite_server_url: "https://cdn.redhat.com/"
+        satellite_server_url: "https://satellite.redhat.com/"
         satellite_username: "{{ username }}"
         satellite_password: "{{ password }}"
         satellite_organization: "Default Organization"
